@@ -118,11 +118,8 @@ public class BasicConformityMonkey extends ConformityMonkey {
     }
     
     public void doMon1(){
-    	 nonconformingClusters.clear();
-         conformingClusters.clear();
-         failedClusters.clear();
-         nonexistentClusters.clear();
-
+    	 nonconformingClusters.clear();conformingClusters.clear();
+         failedClusters.clear();nonexistentClusters.clear();
          List<Cluster> clusters = crawler.clusters();
          Map<String, Set<String>> existingClusterNamesByRegion = Maps.newHashMap();
          for (String region : regions) {
@@ -132,58 +129,54 @@ public class BasicConformityMonkey extends ConformityMonkey {
              existingClusterNamesByRegion.get(cluster.getRegion()).add(cluster.getName());
          }
          List<Cluster> trackedClusters = clusterTracker.getAllClusters(regions.toArray(new String[regions.size()]));
-         for (Cluster trackedCluster : trackedClusters) {
-             if (!existingClusterNamesByRegion.get(trackedCluster.getRegion()).contains(trackedCluster.getName())) {
-                 addCluster(nonexistentClusters, trackedCluster);
-             }
-         }
-         for (String region : regions) {
-             Collection<Cluster> toDelete = nonexistentClusters.get(region);
-             if (toDelete != null) {
-                 clusterTracker.deleteClusters(toDelete.toArray(new Cluster[toDelete.size()]));
-             }
-         }
-
-         LOGGER.info(String.format("Performing conformity check for %d crawled clusters.", clusters.size()));
-         Date now = calendar.now().getTime();
-         for (Cluster cluster : clusters) {
-             boolean conforming;
-             try {
-                 conforming = ruleEngine.check(cluster);
-             } catch (Exception e) {
-                 LOGGER.error(String.format("Failed to perform conformity check for cluster %s", cluster.getName()),
-                         e);
-                 addCluster(failedClusters, cluster);
-                 continue;
-             }
-             cluster.setUpdateTime(now);
-             cluster.setConforming(conforming);
-             if (conforming) {
-                 LOGGER.info(String.format("Cluster %s is conforming", cluster.getName()));
-                 addCluster(conformingClusters, cluster);
-             } else {
-                 LOGGER.info(String.format("Cluster %s is not conforming", cluster.getName()));
-                 addCluster(nonconformingClusters, cluster);
-             }
-             if (!leashed) {
-                 LOGGER.info(String.format("Saving cluster %s", cluster.getName()));
-                 clusterTracker.addOrUpdate(cluster);
-             } else {
-                 LOGGER.info(String.format(
-                         "The conformity monkey is leashed, no data change is made for cluster %s.",
-                         cluster.getName()));
-             }
-         }
-         if (!leashed) {
-             emailNotifier.sendNotifications();
-         } else {
-             LOGGER.info("Conformity monkey is leashed, no notification is sent.");
-         }
-         if (cfg.getBoolOrElse(NS + "summaryEmail.enabled", true)) {
-             sendConformitySummaryEmail();
-         }
+         domon2();
     }
 
+    public void domon2(){
+    	  for (Cluster trackedCluster : trackedClusters) {
+              if (!existingClusterNamesByRegion.get(trackedCluster.getRegion()).contains(trackedCluster.getName())) {
+                  addCluster(nonexistentClusters, trackedCluster);
+              }
+          }
+          for (String region : regions) {
+              Collection<Cluster> toDelete = nonexistentClusters.get(region);
+              if (toDelete != null) {
+                  clusterTracker.deleteClusters(toDelete.toArray(new Cluster[toDelete.size()]));
+              }
+          }
+
+          Date now = calendar.now().getTime();
+          domon3();
+    }
+    boolean conforming;
+    public void domon3(){
+    	for (Cluster cluster : clusters) {
+            domn4();
+        }
+        if (!leashed) {
+            emailNotifier.sendNotifications();
+        } else {}
+        if (cfg.getBoolOrElse(NS + "summaryEmail.enabled", true)) {
+            sendConformitySummaryEmail();
+        }
+    }
+    
+    public void domn4(){
+    	try {
+            conforming = ruleEngine.check(cluster);
+        } catch (Exception e) {
+            addCluster(failedClusters, cluster);continue;
+        }
+        cluster.setUpdateTime(now);cluster.setConforming(conforming);
+    	 if (conforming) {
+             addCluster(conformingClusters, cluster);
+         } else {
+             addCluster(nonconformingClusters, cluster);
+         }
+         if (!leashed) {
+             clusterTracker.addOrUpdate(cluster);
+         } 
+    }
     private static void addCluster(Map<String, Collection<Cluster>> map, Cluster cluster) {
         Collection<Cluster> clusters = map.get(cluster.getRegion());
         if (clusters == null) {
